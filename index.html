@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Archipelago of the Young Master</title>
+    <link rel="stylesheet" href="archipelago.css">
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    
+    <div class="ui-overlay">
+        <div class="glitch-title" data-text="The Archipelago">The Archipelago</div>
+        
+        <div class="coordinates">
+            <div>LAT: <span id="lat">0</span></div>
+            <div>LON: <span id="lon">0</span></div>
+        </div>
+        
+        <div class="compass">
+            <div>⬆️ N</div>
+        </div>
+        
+        <div class="controls">
+            <div><strong>Navigation:</strong></div>
+            <div>WASD - Move Boat</div>
+            <div>Mouse - Look Around</div>
+            <div>E - Dock at Islands</div>
+        </div>
+        
+        <div id="islandPopup" class="island-popup">
+            <h3 id="popupTitle">Island Name</h3>
+            <p id="popupDescription">Island description</p>
+            <button class="dock-button" onclick="dockAtIsland()">Launch Project</button>
+        </div>
+    </div>
+
+    <script src="archipelago.js"></script>
+</body>
+</html>
