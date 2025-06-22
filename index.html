@@ -188,10 +188,11 @@
                 }
                 
                 // Use largest Python file
-                const largestPy = pythonFiles.reduce((largest, current) => 
+                const largestPy = pythonFiles.reduce((largest, current) =>
                     current.size > largest.size ? current : largest
                 );
                 detection.mainFile = largestPy;
+                detection.runnable = true;
                 detection.reason = 'Largest Python file: ' + largestPy.name;
                 detection.confidence = 60;
                 return detection;
@@ -201,7 +202,7 @@
             const jsFiles = files.filter(f => f.name.endsWith('.js'));
             if (jsFiles.length > 0) {
                 detection.type = 'JavaScript Project';
-                
+
                 let serverJs = files.find(f => f.name === 'server.js');
                 if (serverJs) {
                     detection.mainFile = serverJs;
@@ -210,7 +211,7 @@
                     detection.confidence = 90;
                     return detection;
                 }
-                
+
                 let indexJs = files.find(f => f.name === 'index.js');
                 if (indexJs) {
                     detection.mainFile = indexJs;
@@ -219,6 +220,13 @@
                     detection.confidence = 85;
                     return detection;
                 }
+
+                // Fallback to first JavaScript file
+                detection.mainFile = jsFiles[0];
+                detection.runnable = true;
+                detection.reason = 'Using first JavaScript file: ' + jsFiles[0].name;
+                detection.confidence = 60;
+                return detection;
             }
             
             // Check for README
@@ -377,11 +385,37 @@
             
             if (detection.mainFile.name.endsWith('.html')) {
                 content = detection.mainFile.content;
+            } else if (detection.mainFile.name.endsWith('.js')) {
+                content = `<!DOCTYPE html>
+<html><head><title>${island.name}</title></head>
+<body>
+<script>${detection.mainFile.content.replace(/<\/(script)/gi, '<\\/$1')}</script>
+</body></html>`;
+            } else if (detection.mainFile.name.endsWith('.py')) {
+                const py = detection.mainFile.content.replace(/`/g, '\\`');
+                content = `<!DOCTYPE html>
+<html><head><title>${island.name}</title>
+<script src="https://cdn.jsdelivr.net/pyodide/v0.23.2/full/pyodide.js"></script>
+</head><body>
+<pre id="output"></pre>
+<script>
+async function run(){
+  let pyodide = await loadPyodide();
+  try {
+    let result = await pyodide.runPythonAsync(`${py}`);
+    if (result !== undefined) document.getElementById('output').textContent = result.toString();
+  } catch(e) {
+    document.getElementById('output').textContent = e;
+  }
+}
+run();
+</script>
+</body></html>`;
             } else {
                 const escapeHtml = (text) => {
                     return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
                 };
-                
+
                 content = `
 <!DOCTYPE html>
 <html><head><title>${island.name}</title>
