@@ -17,58 +17,124 @@ const game = {
         y: canvas.height / 2, 
         angle: 0, 
         speed: 0,
-        maxSpeed: 3,
-        size: 20
+        maxSpeed: 4,
+        size: 25,
+        bobOffset: 0
     },
     keys: {},
     mouse: { x: 0, y: 0 },
     wake: [],
-    nearestIsland: null
+    nearestIsland: null,
+    time: 0,
+    waves: [],
+    weather: {
+        windSpeed: 2,
+        windDirection: 0.5,
+        depth: 150
+    }
 };
 
-// Islands (your projects)
+// Realistic Islands with natural shapes
 const islands = [
     {
         id: 'jarvis',
-        x: 200,
-        y: 150,
-        size: 80,
+        x: 300,
+        y: 200,
+        size: 120,
         name: 'Jarvis AI',
         description: 'Advanced AI assistant with voice recognition and smart home integration.',
-        color: '#ff6b6b',
-        url: '#'
+        baseColor: '#228b22',
+        beachColor: '#f5deb3',
+        rockColor: '#696969',
+        url: '#',
+        shape: generateIslandShape(120, 8), // Natural coastline
+        trees: generateTrees(300, 200, 120, 15)
     },
     {
         id: 'secureconfig',
-        x: 600,
-        y: 300,
-        size: 70,
+        x: 700,
+        y: 350,
+        size: 100,
         name: 'SecureConfig Manager',
         description: 'Enterprise-grade configuration management with encryption and version control.',
-        color: '#4ecdc4',
-        url: '#'
+        baseColor: '#2e8b57',
+        beachColor: '#f5deb3',
+        rockColor: '#708090',
+        url: '#',
+        shape: generateIslandShape(100, 6),
+        trees: generateTrees(700, 350, 100, 12)
     },
     {
         id: 'demos',
-        x: 300,
-        y: 500,
-        size: 90,
+        x: 450,
+        y: 600,
+        size: 140,
         name: 'Interactive Demos',
         description: 'Collection of experimental web technologies and creative coding projects.',
-        color: '#45b7d1',
-        url: '#'
+        baseColor: '#6b8e23',
+        beachColor: '#f5deb3',
+        rockColor: '#2f4f4f',
+        url: '#',
+        shape: generateIslandShape(140, 10),
+        trees: generateTrees(450, 600, 140, 18)
     },
     {
         id: 'systempanel',
-        x: 800,
-        y: 100,
-        size: 75,
+        x: 900,
+        y: 150,
+        size: 110,
         name: 'System Control Panel',
         description: 'Real-time system monitoring and control interface with cyberpunk aesthetics.',
-        color: '#96ceb4',
-        url: '#'
+        baseColor: '#556b2f',
+        beachColor: '#f5deb3',
+        rockColor: '#483d8b',
+        url: '#',
+        shape: generateIslandShape(110, 7),
+        trees: generateTrees(900, 150, 110, 14)
     }
 ];
+
+// Generate natural island coastline
+function generateIslandShape(radius, points) {
+    const shape = [];
+    for (let i = 0; i < points; i++) {
+        const angle = (i / points) * Math.PI * 2;
+        const variation = 0.7 + Math.random() * 0.6; // Natural variation
+        const r = radius * variation;
+        shape.push({
+            x: Math.cos(angle) * r,
+            y: Math.sin(angle) * r
+        });
+    }
+    return shape;
+}
+
+// Generate trees for islands
+function generateTrees(centerX, centerY, islandSize, count) {
+    const trees = [];
+    for (let i = 0; i < count; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const distance = Math.random() * (islandSize * 0.6);
+        trees.push({
+            x: centerX + Math.cos(angle) * distance,
+            y: centerY + Math.sin(angle) * distance,
+            height: 15 + Math.random() * 25,
+            type: Math.random() > 0.5 ? 'palm' : 'tree'
+        });
+    }
+    return trees;
+}
+
+// Initialize water waves
+for (let i = 0; i < 200; i++) {
+    game.waves.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        amplitude: 2 + Math.random() * 4,
+        frequency: 0.01 + Math.random() * 0.02,
+        phase: Math.random() * Math.PI * 2
+    });
+}
 
 // Input handling
 document.addEventListener('keydown', (e) => {
@@ -87,20 +153,69 @@ document.addEventListener('mousemove', (e) => {
     game.mouse.y = e.clientY;
 });
 
-// Water wave effect
+// Realistic water rendering with depth and movement
 function drawWater() {
-    const time = Date.now() * 0.002;
+    const time = Date.now() * 0.001;
+    game.time = time;
     
-    for (let x = 0; x < canvas.width + 50; x += 50) {
-        for (let y = 0; y < canvas.height + 50; y += 50) {
-            const wave = Math.sin((x + y) * 0.01 + time) * 10;
-            ctx.fillStyle = `rgba(0, 100, 150, ${0.1 + Math.sin(time + x * 0.01) * 0.05})`;
-            ctx.fillRect(x, y + wave, 40, 2);
-        }
+    // Base water color with depth gradient
+    const gradient = ctx.createRadialGradient(
+        canvas.width / 2, canvas.height / 2, 0,
+        canvas.width / 2, canvas.height / 2, Math.max(canvas.width, canvas.height)
+    );
+    gradient.addColorStop(0, '#4682b4');
+    gradient.addColorStop(0.5, '#1e3a5f');
+    gradient.addColorStop(1, '#0f1f3f');
+    
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Animated wave patterns
+    game.waves.forEach(wave => {
+        const waveHeight = Math.sin(time * wave.frequency + wave.phase) * wave.amplitude;
+        const opacity = 0.1 + Math.abs(waveHeight) * 0.05;
+        
+        ctx.fillStyle = `rgba(135, 206, 235, ${opacity})`;
+        ctx.fillRect(wave.x - 20, wave.y + waveHeight, 40, 2);
+        
+        // Move waves
+        wave.x += game.weather.windSpeed * Math.cos(game.weather.windDirection);
+        wave.y += game.weather.windSpeed * Math.sin(game.weather.windDirection) * 0.3;
+        
+        // Wrap around screen
+        if (wave.x < -50) wave.x = canvas.width + 50;
+        if (wave.x > canvas.width + 50) wave.x = -50;
+        if (wave.y < -50) wave.y = canvas.height + 50;
+        if (wave.y > canvas.height + 50) wave.y = -50;
+    });
+    
+    // Water foam effects near islands
+    islands.forEach(island => {
+        drawWaterFoam(island);
+    });
+}
+
+// Water foam around islands
+function drawWaterFoam(island) {
+    const foamRadius = island.size + 15;
+    const segments = 32;
+    
+    for (let i = 0; i < segments; i++) {
+        const angle = (i / segments) * Math.PI * 2;
+        const foamX = island.x + Math.cos(angle) * foamRadius;
+        const foamY = island.y + Math.sin(angle) * foamRadius;
+        
+        const foam = Math.sin(game.time * 3 + angle * 2) * 3;
+        const opacity = 0.3 + Math.abs(foam) * 0.1;
+        
+        ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
+        ctx.beginPath();
+        ctx.arc(foamX + foam, foamY, 2 + Math.random() * 2, 0, Math.PI * 2);
+        ctx.fill();
     }
 }
 
-// Draw islands
+// Draw realistic islands with natural features
 function drawIslands() {
     islands.forEach(island => {
         const distance = Math.hypot(
@@ -108,117 +223,257 @@ function drawIslands() {
             game.boat.y - island.y
         );
         
-        // Island base
-        ctx.fillStyle = island.color;
+        // Draw island shadow (depth effect)
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
         ctx.beginPath();
-        ctx.arc(island.x, island.y, island.size, 0, Math.PI * 2);
+        ctx.moveTo(island.x + island.shape[0].x + 3, island.y + island.shape[0].y + 3);
+        island.shape.forEach(point => {
+            ctx.lineTo(island.x + point.x + 3, island.y + point.y + 3);
+        });
+        ctx.closePath();
         ctx.fill();
         
-        // Island glow effect
-        const glowIntensity = Math.max(0, 1 - distance / 200);
-        if (glowIntensity > 0) {
-            ctx.shadowBlur = 20 * glowIntensity;
-            ctx.shadowColor = island.color;
+        // Draw beach (sand)
+        ctx.fillStyle = island.beachColor;
+        ctx.beginPath();
+        ctx.moveTo(island.x + island.shape[0].x, island.y + island.shape[0].y);
+        island.shape.forEach(point => {
+            ctx.lineTo(island.x + point.x, island.y + point.y);
+        });
+        ctx.closePath();
+        ctx.fill();
+        
+        // Draw main island (vegetation)
+        ctx.fillStyle = island.baseColor;
+        ctx.beginPath();
+        ctx.moveTo(island.x + island.shape[0].x * 0.7, island.y + island.shape[0].y * 0.7);
+        island.shape.forEach(point => {
+            ctx.lineTo(island.x + point.x * 0.7, island.y + point.y * 0.7);
+        });
+        ctx.closePath();
+        ctx.fill();
+        
+        // Draw rocks and elevation
+        for (let i = 0; i < 8; i++) {
+            const angle = (i / 8) * Math.PI * 2;
+            const rockX = island.x + Math.cos(angle) * (island.size * 0.3);
+            const rockY = island.y + Math.sin(angle) * (island.size * 0.3);
+            
+            ctx.fillStyle = island.rockColor;
             ctx.beginPath();
-            ctx.arc(island.x, island.y, island.size, 0, Math.PI * 2);
+            ctx.arc(rockX, rockY, 3 + Math.random() * 4, 0, Math.PI * 2);
             ctx.fill();
-            ctx.shadowBlur = 0;
         }
         
-        // Island name
-        ctx.fillStyle = '#ffffff';
-        ctx.font = '14px Courier New';
+        // Draw trees
+        island.trees.forEach(tree => {
+            if (tree.type === 'palm') {
+                drawPalmTree(tree.x, tree.y, tree.height);
+            } else {
+                drawRegularTree(tree.x, tree.y, tree.height);
+            }
+        });
+        
+        // Island name with natural styling
+        ctx.fillStyle = '#2f4f4f';
+        ctx.font = 'bold 16px serif';
         ctx.textAlign = 'center';
-        ctx.fillText(island.name, island.x, island.y + island.size + 20);
+        ctx.strokeStyle = '#f5deb3';
+        ctx.lineWidth = 3;
+        ctx.strokeText(island.name, island.x, island.y + island.size + 30);
+        ctx.fillText(island.name, island.x, island.y + island.size + 30);
         
         // Interaction indicator
-        if (distance < island.size + 50) {
+        if (distance < island.size + 60) {
             game.nearestIsland = island;
-            ctx.strokeStyle = '#00ffff';
-            ctx.lineWidth = 2;
-            ctx.setLineDash([5, 5]);
+            
+            // Glowing dock area
+            ctx.strokeStyle = '#daa520';
+            ctx.lineWidth = 3;
+            ctx.setLineDash([8, 8]);
             ctx.beginPath();
-            ctx.arc(island.x, island.y, island.size + 30, 0, Math.PI * 2);
+            ctx.arc(island.x, island.y, island.size + 40, 0, Math.PI * 2);
             ctx.stroke();
             ctx.setLineDash([]);
             
-            // Press E indicator
-            ctx.fillStyle = '#00ffff';
-            ctx.font = '12px Courier New';
-            ctx.fillText('Press E to dock', island.x, island.y - island.size - 20);
+            // Dock indicator
+            ctx.fillStyle = '#daa520';
+            ctx.font = 'bold 14px serif';
+            ctx.strokeStyle = '#8b4513';
+            ctx.lineWidth = 2;
+            ctx.strokeText('Press E to dock', island.x, island.y - island.size - 30);
+            ctx.fillText('Press E to dock', island.x, island.y - island.size - 30);
         }
     });
     
     // Clear nearest island if not close to any
     const anyClose = islands.some(island => 
-        Math.hypot(game.boat.x - island.x, game.boat.y - island.y) < island.size + 50
+        Math.hypot(game.boat.x - island.x, game.boat.y - island.y) < island.size + 60
     );
     if (!anyClose) game.nearestIsland = null;
 }
 
-// Draw boat
+// Draw palm tree
+function drawPalmTree(x, y, height) {
+    // Trunk
+    ctx.strokeStyle = '#8b4513';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + 2, y - height);
+    ctx.stroke();
+    
+    // Palm fronds
+    for (let i = 0; i < 6; i++) {
+        const angle = (i / 6) * Math.PI * 2;
+        const frondLength = height * 0.6;
+        ctx.strokeStyle = '#228b22';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x + 2, y - height);
+        ctx.lineTo(
+            x + 2 + Math.cos(angle) * frondLength,
+            y - height + Math.sin(angle) * frondLength * 0.3
+        );
+        ctx.stroke();
+    }
+}
+
+// Draw regular tree
+function drawRegularTree(x, y, height) {
+    // Trunk
+    ctx.fillStyle = '#8b4513';
+    ctx.fillRect(x - 2, y - height * 0.7, 4, height * 0.7);
+    
+    // Canopy
+    ctx.fillStyle = '#228b22';
+    ctx.beginPath();
+    ctx.arc(x, y - height, height * 0.4, 0, Math.PI * 2);
+    ctx.fill();
+}
+
+// Draw realistic boat with bobbing motion
 function drawBoat() {
+    // Boat bobbing effect
+    game.boat.bobOffset = Math.sin(game.time * 2) * 2;
+    
     ctx.save();
-    ctx.translate(game.boat.x, game.boat.y);
+    ctx.translate(game.boat.x, game.boat.y + game.boat.bobOffset);
     ctx.rotate(game.boat.angle);
     
-    // Boat body
-    ctx.fillStyle = '#00ffff';
+    // Boat shadow in water
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    ctx.fillRect(-game.boat.size/2, -game.boat.size/4 + 5, game.boat.size, game.boat.size/2);
+    
+    // Boat hull
+    ctx.fillStyle = '#8b4513';
     ctx.fillRect(-game.boat.size/2, -game.boat.size/4, game.boat.size, game.boat.size/2);
     
+    // Boat deck
+    ctx.fillStyle = '#daa520';
+    ctx.fillRect(-game.boat.size/2 + 2, -game.boat.size/4 + 2, game.boat.size - 4, game.boat.size/2 - 4);
+    
+    // Mast
+    ctx.strokeStyle = '#8b4513';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(0, -game.boat.size/4);
+    ctx.lineTo(0, -game.boat.size);
+    ctx.stroke();
+    
+    // Sail
+    if (game.boat.speed > 0.5) {
+        ctx.fillStyle = '#f5f5dc';
+        ctx.beginPath();
+        ctx.moveTo(0, -game.boat.size);
+        ctx.lineTo(15, -game.boat.size * 0.8);
+        ctx.lineTo(15, -game.boat.size * 0.4);
+        ctx.lineTo(0, -game.boat.size/4);
+        ctx.closePath();
+        ctx.fill();
+    }
+    
     // Boat tip
+    ctx.fillStyle = '#654321';
     ctx.beginPath();
     ctx.moveTo(game.boat.size/2, 0);
-    ctx.lineTo(game.boat.size/2 + 10, 0);
-    ctx.lineTo(game.boat.size/2, -5);
-    ctx.lineTo(game.boat.size/2, 5);
+    ctx.lineTo(game.boat.size/2 + 8, 0);
+    ctx.lineTo(game.boat.size/2, -4);
+    ctx.lineTo(game.boat.size/2, 4);
     ctx.closePath();
     ctx.fill();
     
     ctx.restore();
     
-    // Wake effect
+    // Realistic wake with foam
     if (game.boat.speed > 0.5) {
-        game.wake.push({
-            x: game.boat.x - Math.cos(game.boat.angle) * 15,
-            y: game.boat.y - Math.sin(game.boat.angle) * 15,
-            life: 1.0
-        });
+        for (let i = 0; i < 3; i++) {
+            game.wake.push({
+                x: game.boat.x - Math.cos(game.boat.angle) * (20 + i * 10),
+                y: game.boat.y - Math.sin(game.boat.angle) * (20 + i * 10),
+                life: 1.0,
+                size: 3 + i
+            });
+        }
     }
     
-    // Draw wake
+    // Draw wake with realistic foam
     game.wake = game.wake.filter(w => w.life > 0);
     game.wake.forEach(w => {
-        ctx.fillStyle = `rgba(255, 255, 255, ${w.life * 0.5})`;
-        ctx.fillRect(w.x, w.y, 2, 2);
-        w.life -= 0.02;
+        const alpha = w.life * 0.6;
+        ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+        ctx.beginPath();
+        ctx.arc(w.x, w.y, w.size, 0, Math.PI * 2);
+        ctx.fill();
+        w.life -= 0.015;
+        w.size *= 1.02; // Expand foam
     });
 }
 
-// Update boat physics
+// Enhanced boat physics with water resistance
 function updateBoat() {
-    // Movement
-    if (game.keys['w']) game.boat.speed = Math.min(game.boat.maxSpeed, game.boat.speed + 0.2);
-    if (game.keys['s']) game.boat.speed = Math.max(-game.boat.maxSpeed/2, game.boat.speed - 0.2);
-    if (game.keys['a']) game.boat.angle -= 0.05 * (game.boat.speed / game.boat.maxSpeed);
-    if (game.keys['d']) game.boat.angle += 0.05 * (game.boat.speed / game.boat.maxSpeed);
+    const waterResistance = 0.98;
     
-    // Friction
-    game.boat.speed *= 0.95;
+    // Movement with realistic water physics
+    if (game.keys['w']) {
+        game.boat.speed = Math.min(game.boat.maxSpeed, game.boat.speed + 0.15);
+    }
+    if (game.keys['s']) {
+        game.boat.speed = Math.max(-game.boat.maxSpeed/2, game.boat.speed - 0.15);
+    }
+    if (game.keys['a'] && Math.abs(game.boat.speed) > 0.5) {
+        game.boat.angle -= 0.04 * (game.boat.speed / game.boat.maxSpeed);
+    }
+    if (game.keys['d'] && Math.abs(game.boat.speed) > 0.5) {
+        game.boat.angle += 0.04 * (game.boat.speed / game.boat.maxSpeed);
+    }
     
-    // Move boat
-    game.boat.x += Math.cos(game.boat.angle) * game.boat.speed;
-    game.boat.y += Math.sin(game.boat.angle) * game.boat.speed;
+    // Water resistance and wave effects
+    game.boat.speed *= waterResistance;
     
-    // Boundaries (wrap around)
-    if (game.boat.x < -50) game.boat.x = canvas.width + 50;
-    if (game.boat.x > canvas.width + 50) game.boat.x = -50;
-    if (game.boat.y < -50) game.boat.y = canvas.height + 50;
-    if (game.boat.y > canvas.height + 50) game.boat.y = -50;
+    // Wave influence on boat movement
+    const waveInfluence = Math.sin(game.time * 1.5) * 0.3;
+    game.boat.x += Math.cos(game.boat.angle) * game.boat.speed + waveInfluence;
+    game.boat.y += Math.sin(game.boat.angle) * game.boat.speed + Math.cos(game.time * 1.8) * 0.2;
     
-    // Update coordinates display
+    // World boundaries (wrap around)
+    if (game.boat.x < -100) game.boat.x = canvas.width + 100;
+    if (game.boat.x > canvas.width + 100) game.boat.x = -100;
+    if (game.boat.y < -100) game.boat.y = canvas.height + 100;
+    if (game.boat.y > canvas.height + 100) game.boat.y = -100;
+    
+    // Update UI
     document.getElementById('lat').textContent = Math.round(game.boat.y);
     document.getElementById('lon').textContent = Math.round(game.boat.x);
+    
+    // Update depth based on distance from islands
+    let minDistanceToIsland = Infinity;
+    islands.forEach(island => {
+        const dist = Math.hypot(game.boat.x - island.x, game.boat.y - island.y);
+        minDistanceToIsland = Math.min(minDistanceToIsland, dist);
+    });
+    
+    game.weather.depth = Math.max(5, Math.min(200, minDistanceToIsland - 50));
 }
 
 // Show island popup
@@ -231,7 +486,6 @@ function showIslandPopup(island) {
     popup.style.top = (island.y - island.size - 20) + 'px';
     popup.classList.add('visible');
     
-    // Store current island for docking
     popup.dataset.currentIsland = island.id;
 }
 
@@ -247,50 +501,22 @@ function dockAtIsland() {
     const island = islands.find(i => i.id === islandId);
     
     if (island) {
-        // For now, just show an alert. Replace with actual project navigation
-        alert(`Launching ${island.name}!\n\nURL: ${island.url}`);
+        alert(`Welcome to ${island.name}!\n\nLaunching project...`);
         // window.open(island.url, '_blank');
     }
     
     hideIslandPopup();
 }
 
-// Add some ambient particles
-const particles = [];
-for (let i = 0; i < 50; i++) {
-    particles.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        vx: (Math.random() - 0.5) * 0.5,
-        vy: (Math.random() - 0.5) * 0.5,
-        size: Math.random() * 2 + 1
-    });
-}
-
-function updateParticles() {
-    particles.forEach(p => {
-        p.x += p.vx;
-        p.y += p.vy;
-        
-        if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
-        if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
-        
-        ctx.fillStyle = 'rgba(0, 255, 255, 0.3)';
-        ctx.fillRect(p.x, p.y, p.size, p.size);
-    });
-}
-
 // Main game loop
 function gameLoop() {
     // Clear canvas
-    ctx.fillStyle = '#001122';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    updateParticles();
-    updateBoat();
     drawWater();
     drawIslands();
     drawBoat();
+    updateBoat();
     
     requestAnimationFrame(gameLoop);
 }
