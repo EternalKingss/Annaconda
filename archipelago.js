@@ -1,5 +1,6 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
+const customCursor = document.getElementById('customCursor');
 
 // Resize canvas
 function resizeCanvas() {
@@ -33,6 +34,18 @@ const game = {
         depth: 150
     }
 };
+
+const projects = [];
+const fileInput = document.getElementById('fileInput');
+const projectFrame = document.getElementById('projectFrame');
+const projectViewer = document.getElementById('projectViewer');
+
+if (fileInput) {
+    fileInput.addEventListener('change', (e) => {
+        handleFiles(e.target.files);
+        e.target.value = '';
+    });
+}
 
 // Realistic Islands with natural shapes
 const islands = [
@@ -142,6 +155,9 @@ document.addEventListener('keydown', (e) => {
     if (e.key.toLowerCase() === 'e' && game.nearestIsland) {
         showIslandPopup(game.nearestIsland);
     }
+    if (e.key.toLowerCase() === 'u') {
+        document.getElementById('fileInput').click();
+    }
 });
 
 document.addEventListener('keyup', (e) => {
@@ -151,6 +167,9 @@ document.addEventListener('keyup', (e) => {
 document.addEventListener('mousemove', (e) => {
     game.mouse.x = e.clientX;
     game.mouse.y = e.clientY;
+    if (customCursor) {
+        customCursor.style.transform = `translate(${e.clientX}px, ${e.clientY}px)`;
+    }
 });
 
 // Realistic water rendering with depth and movement
@@ -465,6 +484,7 @@ function updateBoat() {
     // Update UI
     document.getElementById('lat').textContent = Math.round(game.boat.y);
     document.getElementById('lon').textContent = Math.round(game.boat.x);
+    document.getElementById('spd').textContent = Math.abs(game.boat.speed).toFixed(1);
     
     // Update depth based on distance from islands
     let minDistanceToIsland = Infinity;
@@ -498,6 +518,40 @@ function showIslandPopup(island) {
 // Hide popup
 function hideIslandPopup() {
     document.getElementById('islandPopup').classList.remove('visible');
+}
+
+function handleFiles(files) {
+    if (!files.length) return;
+    const project = { html: '', css: '', js: '' };
+    const reads = [];
+    Array.from(files).forEach(f => {
+        reads.push(f.text().then(t => {
+            if (f.name.endsWith('.css')) project.css += '\n' + t;
+            else if (f.name.endsWith('.js')) project.js += '\n' + t;
+            else if (f.name.match(/\.html?$/)) project.html = t;
+        }));
+    });
+    Promise.all(reads).then(() => {
+        let html = project.html || '<!DOCTYPE html><html><head></head><body></body></html>';
+        html = html.replace('</head>', `<style>${project.css}</style></head>`);
+        html = html.replace('</body>', `<script>${project.js}</script></body>`);
+        const blob = new Blob([html], { type: 'text/html' });
+        project.url = URL.createObjectURL(blob);
+        projects.push(project);
+        document.getElementById('projectCount').textContent = projects.length;
+        launchProject(projects.length - 1);
+    });
+}
+
+function launchProject(index) {
+    if (!projects[index]) return;
+    projectFrame.src = projects[index].url;
+    projectViewer.classList.remove('hidden');
+}
+
+function closeProject() {
+    projectViewer.classList.add('hidden');
+    projectFrame.src = '';
 }
 
 // Dock at island
