@@ -15,6 +15,8 @@
         <div class="coordinates">
             <div>LAT: <span id="lat">0</span></div>
             <div>LON: <span id="lon">0</span></div>
+            <div>SPD: <span id="spd">0</span> kts</div>
+            <div>Projects: <span id="projectCount">0</span></div>
         </div>
         
         <div class="compass">
@@ -26,6 +28,15 @@
             <div>WASD - Move Boat</div>
             <div>Mouse - Look Around</div>
             <div>E - Dock at Islands</div>
+            <div>U - Upload Project</div>
+        </div>
+
+        <button class="upload-button" onclick="document.getElementById('fileInput').click()">Upload Project</button>
+        <input id="fileInput" type="file" multiple style="display:none" accept=".html,.htm,.css,.js,.json">
+
+        <div id="projectViewer" class="project-viewer hidden">
+            <iframe id="projectFrame"></iframe>
+            <button class="dock-button" onclick="closeProject()">Close</button>
         </div>
         
         <div id="islandPopup" class="island-popup">
@@ -46,6 +57,7 @@
         </div>
     </div>
 
+    <div id="customCursor"></div>
     <script src="archipelago.js"></script>
 </body>
 </html>
